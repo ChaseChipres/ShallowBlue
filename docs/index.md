@@ -3,7 +3,7 @@ layout: default
 title:  Home
 ---
 
-Source code: [Shallow Blue](https://github.com/chasechipres/shallowblue)
+Source code: [https://github.com/chasechipres/shallowblue](https://github.com/chasechipres/shallowblue)
 
 Reports:
 
