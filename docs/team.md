@@ -1,6 +1,6 @@
 ---
 layout: default
-title:  Shallow Blue
+title:  Team
 ---
 
 # Shallow Blue
