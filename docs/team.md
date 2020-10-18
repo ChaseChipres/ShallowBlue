@@ -1,16 +1,16 @@
 ---
 layout: default
-title:  ShallowBlue
+title:  Shallow Blue
 ---
 
-# {{ page.title }}
+# Shallow Blue
 
 
-## USER 1
+## Chase Cherico-Chipres
 ***UCI Net ID***: ccherico
 
-## USER 2
+## Ryan Miranda
 ***UCI Net ID***: rjmirand
 
-## USER 3
+## Jona Huang
 ***UCI Net ID***: jthuang2
