@@ -9,7 +9,7 @@ We aim to create an agent that gathers underwater resources in the most efficien
 
 ## 2.3 AI/ML Algorithms
 
-We anticipate using reinforcement learning, specifically deep Q-Learning, with rewards and punishments. We will start with a Neural Network with linear layers to implement the Q-Network as done in Assignment 2. 
+We anticipate using reinforcement learning, specifically deep Q-Learning, with rewards and punishments. We will start with a Neural Network with linear layers to implement the Q-Network as done in Assignment 2. Depending on our agent's success, we might experiment with different activations functions as well. 
  
 ## 2.4 Evaluation Plan
 
