@@ -42,10 +42,12 @@ ACTION_DICT = {
     0: 'move 1',    # Move one block forward
     1: 'turn 1',    # Turn 90 degrees to the right
     2: 'turn -1',   # Turn 90 degrees to the left
-    3: 'jump 1',    # Activate continuous jump up
-    4: 'jump 0',    # Deactivate continuous jump up
+    3: 'jump 0',    # Deactivate continuous jump up
+    4: 'jump 1',    # Activate continuous jump up
     5: 'attack 1'   # Destroy block
 }
+FULL_AIR = 300
+YPOS_START = 11
 
 
 # Q-Value Network
@@ -107,14 +109,14 @@ def GetMissionXML():
 
                         <DrawingDecorator>
                             ''' + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='0' y2='20' z1='{}' z2='{}' type='glowstone'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='0' y2='20' z1='{}' z2='{}' type='sea_lantern'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='1' y2='20' z1='{}' z2='{}' type='air'/>".format(-SIZE_LESS, SIZE_LESS, -SIZE_LESS, SIZE_LESS) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='glowstone'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='sea_lantern'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='10' z1='{}' z2='{}' type='water'/>".format(-SIZE_LESS, SIZE_LESS, -SIZE_LESS, SIZE_LESS) + \
                             diamond_xml + \
                             coal_xml + \
                             '''
-                            <DrawBlock x='0'  y='10' z='0' type='glowstone' />
+                            <DrawBlock x='0'  y='10' z='0' type='sea_lantern' />
                         </DrawingDecorator>
 
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -134,9 +136,13 @@ def GetMissionXML():
                     <AgentHandlers>
 
                         <RewardForCollectingItem>
-                            <Item reward="4" type="diamond"/>
-                            <Item reward="1" type="coal"/>
+                            <Item reward="2" type="diamond"/>
+                            <Item reward="0.5" type="coal"/>
                         </RewardForCollectingItem>
+
+                        <RewardForMissionEnd rewardForDeath="-1"> 
+                            <Reward reward="0" description=""></Reward>
+                        </RewardForMissionEnd>
     
                         <DiscreteMovementCommands>
                             <ModifierList type="deny-list">
@@ -151,6 +157,8 @@ def GetMissionXML():
                         </ContinuousMovementCommands>
 
                         <ObservationFromFullStats/>
+                        <ObservationFromRay/>
+                        <ObservationFromHotBar/>
 
                         <ObservationFromGrid>
                             <Grid name="floorAll">
@@ -166,7 +174,7 @@ def GetMissionXML():
             </Mission>'''
 
 
-def get_action(obs, q_network, epsilon, allow_break_action):
+def get_action(obs, q_network, epsilon, allow_break_action, air_level):
     """
     Select action according to e-greedy policy
 
@@ -189,16 +197,26 @@ def get_action(obs, q_network, epsilon, allow_break_action):
         if not allow_break_action:
             action_values[0, 5] = -float('inf')  
 
-        rand = random.random()
-        if rand < epsilon:
-            explore = True
-        else:
-            explore = False
+        # if explore and allow_break_action:
+        #     action_idx = random.randint(0, 5)
+        # elif explore and not allow_break_action:
+        #     action_idx = random.randint(0, 4)
 
-        if explore and allow_break_action:
-            action_idx = random.randint(0, 5)
-        elif explore and not allow_break_action:
-            action_idx = random.randint(0, 4)
+        explore = random.random() < epsilon
+
+        if explore:
+            if air_level > (FULL_AIR * 0.5):
+                # dont swim up
+                if not allow_break_action:
+                    action_idx = random.randint(0,3)
+                else:
+                    action_idx = random.choice([0,1,2,3,5]) 
+
+            else:
+                if not allow_break_action:
+                    action_idx = random.randint(0,4)
+                else:
+                    action_idx = random.randint(0,5)
         else:
             # Select action with highest Q-value
             action_idx = torch.argmax(action_values).item()
@@ -244,7 +262,11 @@ def get_observation(world_state):
     Returns
         observation: <np.array>
     """
-    obs = np.zeros((2, OBS_SIZE, OBS_SIZE))
+
+    # new column for YPos value
+    obs = np.zeros((2, OBS_SIZE, OBS_SIZE, 1))
+    air_level = 0
+    has_resources = False
 
     while world_state.is_mission_running:
         time.sleep(0.1)
@@ -264,9 +286,14 @@ def get_observation(world_state):
 
             # Get observation
             grid = observations['floorAll']
+            air_level = observations['Air']
+            has_resources = observations['Hotbar_1_size'] > 0 or observations['Hotbar_2_size'] > 0
 
             grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
-            obs = np.reshape(grid_binary, (2, OBS_SIZE, OBS_SIZE))
+            obs = np.reshape(grid_binary, (2, OBS_SIZE, OBS_SIZE, 1))
+            
+            # add a new value for the Y position (idk if this is correct)?
+            obs[0][0][0][0] = 0 if observations['YPos'] >= 10 else 1
 
             # Rotate observation with orientation of agent
             yaw = observations['Yaw']
@@ -279,7 +306,7 @@ def get_observation(world_state):
             
             break
 
-    return obs
+    return obs, air_level, has_resources
 
 
 def prepare_batch(replay_buffer):
@@ -359,8 +386,8 @@ def train(agent_host):
         agent_host (MalmoPython.AgentHost)
     """
     # Init networks
-    q_network = QNetwork((2, OBS_SIZE, OBS_SIZE), len(ACTION_DICT))
-    target_network = QNetwork((2, OBS_SIZE, OBS_SIZE), len(ACTION_DICT))
+    q_network = QNetwork((2, OBS_SIZE, OBS_SIZE, 1), len(ACTION_DICT))
+    target_network = QNetwork((2, OBS_SIZE, OBS_SIZE, 1), len(ACTION_DICT))
     target_network.load_state_dict(q_network.state_dict())
 
     # Init optimizer
@@ -384,6 +411,8 @@ def train(agent_host):
         episode_return = 0
         episode_loss = 0
         done = False
+        air_level = 0
+        has_resources = False
 
         # Setup Malmo
         agent_host = init_malmo(agent_host)
@@ -393,13 +422,13 @@ def train(agent_host):
             world_state = agent_host.getWorldState()
             for error in world_state.errors:
                 print("\nError:",error.text)
-        obs = get_observation(world_state)
+        obs, air_level, has_resources = get_observation(world_state)
 
         # Run episode
         while world_state.is_mission_running:
             # Get action
             allow_break_action = obs[1, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 1
-            action_idx = get_action(obs, q_network, epsilon, allow_break_action)
+            action_idx = get_action(obs, q_network, epsilon, allow_break_action, air_level)
             command = ACTION_DICT[action_idx]
 
             # Take step
@@ -422,7 +451,11 @@ def train(agent_host):
             world_state = agent_host.getWorldState()
             for error in world_state.errors:
                 print("Error:", error.text)
-            next_obs = get_observation(world_state) 
+            next_obs, air_level, temp_has_resources = get_observation(world_state)
+
+            # if has resources is already true, dont set it again
+            if not has_resources and temp_has_resources:
+                has_resources = True 
 
             # Get reward
             reward = 0
@@ -446,6 +479,10 @@ def train(agent_host):
 
                 if global_step % TARGET_UPDATE == 0:
                     target_network.load_state_dict(q_network.state_dict())
+
+        # if agent hasnt collected anything, reduce its reward
+        if not has_resources:
+            episode_return -= 0.5
 
         num_episode += 1
         returns.append(episode_return)
