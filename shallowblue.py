@@ -261,8 +261,7 @@ def get_observation(world_state):
         observation: <np.array>
     """
 
-    # new column for YPos value
-    obs = np.zeros((2, OBS_SIZE, OBS_SIZE, 1))
+    obs = np.zeros((2, OBS_SIZE, OBS_SIZE))
     air_level = 0
     has_resources = False
 
@@ -277,21 +276,13 @@ def get_observation(world_state):
             msg = world_state.observations[-1].text
             observations = json.loads(msg)
 
-            # observations json will give us important metadata
-            # in assignment 2 we used floorAll, but in this we should also use
-            # Life, or DamageTaken maybe? YPos (since loot at sea floor)
-            # There is also 'Air' which could be very important
-
             # Get observation
             grid = observations['floorAll']
             air_level = observations['Air']
             has_resources = observations['Hotbar_1_size'] > 0 or observations['Hotbar_2_size'] > 0
 
             grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
-            obs = np.reshape(grid_binary, (2, OBS_SIZE, OBS_SIZE, 1))
-            
-            # add a new value for the Y position (idk if this is correct)?
-            obs[0][0][0][0] = 0 if observations['YPos'] >= 10 else 1
+            obs = np.reshape(grid_binary, (2, OBS_SIZE, OBS_SIZE))
 
             # Rotate observation with orientation of agent
             yaw = observations['Yaw']
@@ -384,8 +375,8 @@ def train(agent_host):
         agent_host (MalmoPython.AgentHost)
     """
     # Init networks
-    q_network = QNetwork((2, OBS_SIZE, OBS_SIZE, 1), len(ACTION_DICT))
-    target_network = QNetwork((2, OBS_SIZE, OBS_SIZE, 1), len(ACTION_DICT))
+    q_network = QNetwork((2, OBS_SIZE, OBS_SIZE), len(ACTION_DICT))
+    target_network = QNetwork((2, OBS_SIZE, OBS_SIZE), len(ACTION_DICT))
     target_network.load_state_dict(q_network.state_dict())
 
     # Init optimizer
@@ -479,8 +470,10 @@ def train(agent_host):
                     target_network.load_state_dict(q_network.state_dict())
 
         # if agent hasnt collected anything, reduce its reward
-        if not has_resources:
-            episode_return -= 0.5
+        # if not has_resources:
+        #     episode_return -= 0.5
+
+        print("Has resources:",has_resources, "Score:", episode_return)
 
         num_episode += 1
         returns.append(episode_return)
