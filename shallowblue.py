@@ -39,12 +39,14 @@ LEARNING_RATE = 1e-4
 START_TRAINING = 500
 LEARN_FREQUENCY = 1
 ACTION_DICT = {
-    0: 'move 1',    # Move one block forward
-    1: 'turn 1',    # Turn 90 degrees to the right
-    2: 'turn -1',   # Turn 90 degrees to the left
-    3: 'jump 0',    # Deactivate continuous jump up
-    4: 'jump 1',    # Activate continuous jump up
-    5: 'attack 1'   # Destroy block
+    0: 'move 1',        # Move one block forward
+    1: 'setYaw 0',      # Set yaw to 0
+    2: 'setYaw 90',     # Set yaw to 90
+    3: 'setYaw 180',    # Set yaw to 180
+    4: 'setYaw 270',    # Set yaw to 270
+    5: 'jump 0',        # Deactivate continuous jump up
+    6: 'jump 1',        # Activate continuous jump up
+    7: 'attack 1'       # Destroy block
 }
 FULL_AIR = 300
 YPOS_START = 11
@@ -146,15 +148,17 @@ def GetMissionXML():
     
                         <DiscreteMovementCommands>
                             <ModifierList type="deny-list">
-                            <command>jump</command>
+                                <command>jump</command>
                             </ModifierList>
                         </DiscreteMovementCommands>
 
                         <ContinuousMovementCommands>
                             <ModifierList type="allow-list">
-                            <command>jump</command>
+                                <command>jump</command>
                             </ModifierList>
                         </ContinuousMovementCommands>
+
+                        <AbsoluteMovementCommands/>
 
                         <ObservationFromFullStats/>
                         <ObservationFromRay/>
@@ -195,28 +199,22 @@ def get_action(obs, q_network, epsilon, allow_break_action, air_level):
 
         # Remove attack/mine from possible actions if not facing a diamond or coal
         if not allow_break_action:
-            action_values[0, 5] = -float('inf')  
-
-        # if explore and allow_break_action:
-        #     action_idx = random.randint(0, 5)
-        # elif explore and not allow_break_action:
-        #     action_idx = random.randint(0, 4)
+            action_values[0, 7] = -float('inf')  
 
         explore = random.random() < epsilon
 
         if explore:
             if air_level > (FULL_AIR * 0.5):
-                # dont swim up
                 if not allow_break_action:
-                    action_idx = random.randint(0,3)
+                    action_idx = random.randint(0,5)                # removes action 6 (swim up) and 7 (attack)
                 else:
-                    action_idx = random.choice([0,1,2,3,5]) 
+                    action_idx = random.choice([0,1,2,3,4,5,7])     # removes action 6 (swim up)
 
             else:
                 if not allow_break_action:
-                    action_idx = random.randint(0,4)
+                    action_idx = random.randint(0,6)                # removes action 7 (attack)
                 else:
-                    action_idx = random.randint(0,5)
+                    action_idx = random.randint(0,7)
         else:
             # Select action with highest Q-value
             action_idx = torch.argmax(action_values).item()
