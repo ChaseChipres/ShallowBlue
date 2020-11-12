@@ -5,7 +5,7 @@ title:  Home
 
 ![Deep Blue](img/deepblue.jpeg)
 
-# *What is intelligence?*
+## *What is intelligence?*
 
 ### Introduction
 The name for our project, ***Shallow Blue***, comes from the famous IBM chess-playing computer ***Deep Blue***.
