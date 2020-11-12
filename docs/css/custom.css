@@ -3,7 +3,7 @@
 html {
   position: relative;
   min-height: 100%;
-  color: #b2dbe7;
+  background-color: #b2dbe7;
 }
 body {
   /* Margin bottom by footer height */
