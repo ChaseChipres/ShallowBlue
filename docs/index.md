@@ -3,7 +3,7 @@ layout: default
 title:  Home
 ---
 
-## *What is intelligence?*
+## What is intelligence?
 
 ![Deep Blue](img/deepblue.jpeg)
 
