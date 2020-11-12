@@ -3,11 +3,13 @@ layout: default
 title:  Team
 ---
 
-## Chase Cherico-Chipres
+# Group Members
+
+#### Chase Cherico-Chipres
 ***UCI Net ID***: ccherico
 
-## Ryan Miranda
+#### Ryan Miranda
 ***UCI Net ID***: rjmirand
 
-## Jona Huang
+#### Jona Huang
 ***UCI Net ID***: jthuang2
