@@ -3,9 +3,9 @@ layout: default
 title:  Home
 ---
 
-![Deep Blue](img/deepblue.jpeg)
-
 ## *What is intelligence?*
+
+![Deep Blue](img/deepblue.jpeg)
 
 ### Introduction
 The name for our project, ***Shallow Blue***, comes from the famous IBM chess-playing computer ***Deep Blue***.
