@@ -3,7 +3,7 @@ layout: default
 title:  Team
 ---
 
-## Group Members<br>
+## Group Members<br><br>
 
 #### Chase Cherico-Chipres
 ***UCI Net ID***: ccherico
