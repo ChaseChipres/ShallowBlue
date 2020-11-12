@@ -7,10 +7,8 @@ title:  Home
 
 # What is intelligence?
 
-Source code: [https://github.com/chasechipres/shallowblue](https://github.com/chasechipres/shallowblue)
+## Introduction
+The name for our project, ***Shallow Blue***, comes from the famous IBM chess-playing computer ***Deep Blue***.
 
-Reports:
-
-- [Proposal](proposal.html)
-- [Status](status.html)
-- [Final](final.html)
+## Source Code
+[https://github.com/chasechipres/shallowblue](https://github.com/chasechipres/shallowblue)
