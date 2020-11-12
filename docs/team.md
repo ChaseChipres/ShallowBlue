@@ -3,7 +3,7 @@ layout: default
 title:  Team
 ---
 
-![Group](img/group.jpg)<br><br>
+![Team](img/team.png)<br><br>
 
 #### Chase Cherico-Chipres
 ***UCI Net ID***: ccherico<br><br>
