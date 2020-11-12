@@ -3,9 +3,6 @@ layout: default
 title:  Team
 ---
 
-# Shallow Blue
-
-
 ## Chase Cherico-Chipres
 ***UCI Net ID***: ccherico
 
