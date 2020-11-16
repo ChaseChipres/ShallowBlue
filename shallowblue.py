@@ -118,7 +118,7 @@ def GetMissionXML():
                             diamond_xml + \
                             coal_xml + \
                             '''
-                            <DrawBlock x='0'  y='10' z='0' type='sea_lantern' />
+                            
                         </DrawingDecorator>
 
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -200,6 +200,12 @@ def get_action(obs, q_network, epsilon, allow_break_action, air_level):
         # Remove attack/mine from possible actions if not facing a diamond or coal
         if not allow_break_action:
             action_values[0, 7] = -float('inf')  
+        
+        # Remove swim up from possible actions if air > 30% of full
+        if air_level > (FULL_AIR * 0.3): 
+            action_values[0, 6] = -float('inf')
+        else:
+            action_values[0, 5] = -float('inf')
 
         explore = random.random() < epsilon
 
@@ -212,9 +218,9 @@ def get_action(obs, q_network, epsilon, allow_break_action, air_level):
 
             else:
                 if not allow_break_action:
-                    action_idx = random.randint(0,6)                # removes action 7 (attack)
+                    action_idx = random.choice([0,1,2,3,4,6])       # removes action 5 (cancel swim up) and 7 (attack)
                 else:
-                    action_idx = random.randint(0,7)
+                    action_idx = random.choice([0,1,2,3,4,6,7])     # removes action 5 (cancel swim up)
         else:
             # Select action with highest Q-value
             action_idx = torch.argmax(action_values).item()
@@ -237,7 +243,7 @@ def init_malmo(agent_host):
 
     for retry in range(max_retries):
         try:
-            agent_host.startMission( my_mission, my_clients, my_mission_record, 0, "DiamondCollector" )
+            agent_host.startMission( my_mission, my_clients, my_mission_record, 0, "ShallowBlue" )
             break
         except RuntimeError as e:
             if retry == max_retries - 1:
