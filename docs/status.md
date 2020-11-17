@@ -11,9 +11,9 @@ We aim to create an agent that gathers underwater resources in the most efficien
 ## Approach
 Our initial implementation was modeled off of the original Assignment Two; the main algorithm used is Deep Q-Network reinforcement learning. We used the given Neural Network with two fully connected layers and a ReLU activation function to estimate our Q-values. The Q-value update function is:
 
-Q(s,a) <-- Q(s,a) + $\alpha$[ r + $\gamma$max$_{q}Q(s',a') - Q(s,a)$ ] 
+Q(s,a) <-- Q(s,a) + $$\alpha$$[ r + $$\gamma$$max$$_{q}$$Q(s',a') - Q(s,a) ] 
 
-as was given in lecture. We decided not to modify the activation function due to its widespread popularity and the fact that our agent doesn’t experience negative rewards as often so the [“Dying Relu”](https://stats.stackexchange.com/questions/126238/what-are-the-advantages-of-relu-over-sigmoid-function-in-deep-neural-networks) problem does not arise. Additionally, we continued to select random actions in an $\epsilon$-greedy fashion. However, we introduced a new constraint based on the agent’s air-level that limits what actions it is allowed to choose from. If the agent’s air-level is greater than X% of its maximum capacity (300 units), it is not allowed to swim up to the surface for air. After varying X, we determined that a value of 30 struck a good balance between the agent remaining on the seafloor to gather resources and swimming up to the surface for air.
+as was given in lecture. We decided not to modify the activation function due to its widespread popularity and the fact that our agent doesn’t experience negative rewards as often so the [“Dying Relu”](https://stats.stackexchange.com/questions/126238/what-are-the-advantages-of-relu-over-sigmoid-function-in-deep-neural-networks) problem does not arise. Additionally, we continued to select random actions in an $$\epsilon$$-greedy fashion. However, we introduced a new constraint based on the agent’s air-level that limits what actions it is allowed to choose from. If the agent’s air-level is greater than X% of its maximum capacity (300 units), it is not allowed to swim up to the surface for air. After varying X, we determined that a value of 30 struck a good balance between the agent remaining on the seafloor to gather resources and swimming up to the surface for air.
 
 ![Current Q-Network](img/qNet.png)
 *Current Q-Network*
