@@ -32,7 +32,7 @@ Our Q-Network currently receives a 2x5x5 observation which are all of the surrou
 
 Furthermore, our reinforcement learning relies on 3 rewards and 2 terminal states:
 
-**Rewards**: +2 reward for gathering each diamond, +0.5 reward for gathering each coal, -1 reward for drowning
+**Rewards**: +2 reward for gathering each diamond, +0.5 reward for gathering each coal, -1 reward for drowning<br>
 **Terminal States**: 100 steps or drowning
 
 ### Environment
