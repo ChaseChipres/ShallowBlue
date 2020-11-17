@@ -508,5 +508,3 @@ if __name__ == '__main__':
         exit(0)
 
     train(agent_host)
-
-# Testing branch
