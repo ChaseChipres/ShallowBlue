@@ -15,7 +15,7 @@ Q(s,a) <-- Q(s,a) + $\alpha$[ r + $\gamma$max$_{q}Q(s',a') - Q(s,a)$ ]
 
 as was given in lecture. We decided not to modify the activation function due to its widespread popularity and the fact that our agent doesn’t experience negative rewards as often so the [“Dying Relu”](https://stats.stackexchange.com/questions/126238/what-are-the-advantages-of-relu-over-sigmoid-function-in-deep-neural-networks) problem does not arise. Additionally, we continued to select random actions in an $\epsilon$-greedy fashion. However, we introduced a new constraint based on the agent’s air-level that limits what actions it is allowed to choose from. If the agent’s air-level is greater than X% of its maximum capacity (300 units), it is not allowed to swim up to the surface for air. After varying X, we determined that a value of 30 struck a good balance between the agent remaining on the seafloor to gather resources and swimming up to the surface for air.
 
-![Current Q-Network](img/qNet.png)
+![Current Q-Network](img/qNet.png)<br>
 *Current Q-Network (based on Kolby’s Assignment 2 description)*
 
 Our states revolve around the types of blocks our agent perceives in its surroundings. For our initial attempt, it receives the same 2x5x5 grid from Assignment2 as observations, with an additional value for the agent’s Y-Position, leading to a flattened array size of (51,). The grid is received from `<ObservationFromGrid>` and the two channels refer to the presence of diamond or coal ore. The YPos is gathered from `<ObservationFromFullStats>`, giving every state an element of verticality, along with a position on the bottom of the underwater arena. The agent has 8 possible actions: one to move forward, four actions for turning between 0 and 270 degrees, two continuous actions for starting/stopping its swim to the surface, and one for mining.
@@ -25,7 +25,7 @@ Our agent receives a positive reward of 2 for acquiring diamonds and another pos
 ## Evaluation
 Our quantitative evaluation relies on generating baselines for every environment our agent will be trained on. For this status report, the only environment is the flat, 80x80x10 pool of water. An agent moving randomly through this environment got, on average, a negative return close to 0. Without learning, a random agent arbitrarily swam up and down without gathering many resources. However, these same random swim up actions saved it from drowning often, so the return didn't fall too far below 0.
 
-![Average Return](img/Status_report_return_graph.png)
+![Average Return](img/Status_report_return_graph.png)<br>
 *Average Return Over 10000 Steps*
 
 Unfortunately, as seen in the graph above, the agent’s average return did not get very high after training. We believe that the larger number of actions (8 compared with 4 in Assignment Two) warrant a need to train the agent for a longer period of time. This is because the increase in the action space likely leads to a greater number of possible (s,a) tuples that get inputted into our algorithm. Some solutions to this issue are explored in the next section.
