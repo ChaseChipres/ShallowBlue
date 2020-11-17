@@ -17,9 +17,23 @@ Our project uses reinforcement learning to effectively gather resources underwat
 
 ![Q-Network](img/qNet.png)
 
+Our Q-Network currently receives a 2x5x5 observation which are all of the surrounding blocks. We flatten this observation and append the 'yPos' of our agent. This a total of 51 values that we then modify into 0s and 1s. If the surrounding blocks are mine-able, they receieve a value of 1, otherwise they are 0. As for the 'yPos' value, we assign it a 1 when the agent is underwater, otherwise it is 0. The 8 q-values that our network outputs are the 8 possible actions our agent can execute.
+
+These actions are:
+1. Move one block forward
+2. Set yaw to 0
+3. Set yaw to 90
+4. Set yaw to 180
+5. Set yaw to 270
+6. Deactivate continuous jump
+7. Activate continuous jump
+8. Destroy block
+
 ### Environment
 
 ![Environment](img/environment.png)
+
+Our environment is a 10x20x20 swimming pool with various resources scattering the bed of the water. The resources currently in our environment are diamonds and coal, however we plan to add more.
 
 ### Source Code
 [https://github.com/chasechipres/shallowblue](https://github.com/chasechipres/shallowblue)
