@@ -3,7 +3,7 @@ layout: default
 title:  Status
 ---
 
-<iframe src="https://drive.google.com/file/d/1vhvysyKHUKV9ofD6dMxrzOk7sj3L6vRq/preview" width="640" height="480"></iframe>
+<iframe src="https://www.youtube.com/watch?v=8le6hKJmdII&feature=youtu.be" width="640" height="480"></iframe>
 
 ## Project Summary
 We aim to create an agent that gathers underwater resources in the most efficient way possible. For the final version, the agent will receive observations from its environment in the form of the types of blocks in its line of sight. It will then take appropriate actions, such as heading to the surface of the water to replenish air, avoiding obstacles and hostile mobs, and collecting loose and mined resources. The environment will start out as a flat 80x80 block seabed with a depth of 10 blocks, but will vary to include more challenges, including underwater structures, partially covered surfaces (to make getting air more difficult), items that replenish hunger and air levels, and more. This project could potentially be used to automate the repetitive task of gathering aquatic materials such as sand, clay, and food items, including various fish.
