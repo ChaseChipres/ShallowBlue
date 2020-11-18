@@ -39,7 +39,7 @@ Furthermore, our reinforcement learning relies on 3 rewards and 2 terminal state
 
 ![Environment](img/environment.png)
 
-Our environment is a 10x20x20 swimming pool with various resources scattering the bed of the water. The resources currently in our environment are diamonds and coal, however we plan to add more.
+Our environment is a 10x40x40 swimming pool with various resources scattering the bed of the water. The resources currently in our environment are diamonds and coal, however we plan to add more.
 
 ### Source Code
 [https://github.com/chasechipres/shallowblue](https://github.com/chasechipres/shallowblue)
