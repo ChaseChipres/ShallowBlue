@@ -23,9 +23,15 @@ from torch.utils.data import Dataset, DataLoader
 
 # Hyperparameters
 SIZE = 20
-SIZE_LESS = 19
-DIAMOND_DENSITY = .01
-COAL_DENSITY = .03
+
+SIZE_POOL = SIZE - 1  # water stretches size-1 in each direction
+
+WATER_DEPTH = 5
+AGENT_START_Y = WATER_DEPTH + 1  # agent always starts 1 above the water (to prevent excessive falling or other stuff)
+
+DIAMOND_DENSITY = .1
+COAL_DENSITY = .2
+
 OBS_SIZE = 5
 MAX_EPISODE_STEPS = 100
 MAX_GLOBAL_STEPS = 10000
@@ -78,16 +84,16 @@ class QNetwork(nn.Module):
 
 def GetMissionXML():
 
-    grid = choice([0, 1, 2], size=(SIZE_LESS*2, SIZE_LESS*2), p=[.96, DIAMOND_DENSITY, COAL_DENSITY])
+    grid = choice([0, 1, 2], size=(SIZE_POOL * 2, SIZE_POOL * 2), p=[1 - DIAMOND_DENSITY - COAL_DENSITY, DIAMOND_DENSITY, COAL_DENSITY])
     diamond_xml = ""
     coal_xml = ""
 
     for index, row in enumerate(grid):
         for col, item in enumerate(row):
             if item == 1:
-                diamond_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-SIZE_LESS, col-SIZE_LESS)
+                diamond_xml += f"<DrawBlock x='{index - SIZE_POOL}'  y='2' z='{col - SIZE_POOL}' type='diamond_ore' />"
             elif item == 2:
-                diamond_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-SIZE_LESS, col-SIZE_LESS)
+                diamond_xml += f"<DrawBlock x='{index - SIZE_POOL}'  y='2' z='{col - SIZE_POOL}' type='coal_ore' />"
     
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -111,13 +117,13 @@ def GetMissionXML():
 
                         <DrawingDecorator>
                             ''' + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='0' y2='20' z1='{}' z2='{}' type='sea_lantern'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='1' y2='20' z1='{}' z2='{}' type='air'/>".format(-SIZE_LESS, SIZE_LESS, -SIZE_LESS, SIZE_LESS) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='sea_lantern'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='10' z1='{}' z2='{}' type='water'/>".format(-SIZE_LESS, SIZE_LESS, -SIZE_LESS, SIZE_LESS) + \
-                            diamond_xml + \
-                            coal_xml + \
-                            '''
+                            f"<DrawCuboid x1='{-SIZE}' x2='{SIZE}' y1='0' y2='20' z1='{-SIZE}' z2='{SIZE}' type='sea_lantern'/>" + \
+                            f"<DrawCuboid x1='{-SIZE_POOL}' x2='{SIZE_POOL}' y1='1' y2='20' z1='{-SIZE_POOL}' z2='{SIZE_POOL}' type='air'/>" + \
+                            f"<DrawCuboid x1='{-SIZE}' x2='{SIZE}' y1='0' y2='2' z1='{-SIZE}' z2='{SIZE}' type='sea_lantern'/>" + \
+                            f"<DrawCuboid x1='{-SIZE_POOL}' x2='{SIZE_POOL}' y1='2' y2='{WATER_DEPTH}' z1='{-SIZE_POOL}' z2='{SIZE_POOL}' type='water'/>" + \
+           diamond_xml + \
+           coal_xml + \
+           '''
                             
                         </DrawingDecorator>
 
@@ -129,7 +135,9 @@ def GetMissionXML():
                     <Name>ShallowBlue</Name>
 
                     <AgentStart>
-                        <Placement x="0.5" y="11" z="0.5" pitch="45" yaw="0"/>
+                        ''' + \
+                        f"<Placement x='0.5' y='{AGENT_START_Y}' z='0.5' pitch='45' yaw='0'/>" + \
+                        '''
                         <Inventory>
                             <InventoryItem slot="0" type="diamond_pickaxe"/>
                         </Inventory>
@@ -166,12 +174,12 @@ def GetMissionXML():
 
                         <ObservationFromGrid>
                             <Grid name="floorAll">
-                                <min x="-'''+str(int(OBS_SIZE/2))+'''" y="-1" z="-'''+str(int(OBS_SIZE/2))+'''"/>
-                                <max x="'''+str(int(OBS_SIZE/2))+'''" y="0" z="'''+str(int(OBS_SIZE/2))+'''"/>
+                                <min x="-''' + str(int(OBS_SIZE/2)) + '''" y="-1" z="-''' + str(int(OBS_SIZE/2)) + '''"/>
+                                <max x="''' + str(int(OBS_SIZE/2)) + '''" y="0" z="''' + str(int(OBS_SIZE/2)) + '''"/>
                             </Grid>
                         </ObservationFromGrid>
                         
-                        <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
+                        <AgentQuitFromReachingCommandQuota total="''' + str(MAX_EPISODE_STEPS) + '''" />
 
                     </AgentHandlers>
                 </AgentSection>
@@ -202,10 +210,12 @@ def get_action(obs, q_network, epsilon, allow_break_action, air_level):
             action_values[0, 7] = -float('inf')  
         
         # Remove swim up from possible actions if air > 30% of full
+        '''
         if air_level > (FULL_AIR * 0.3): 
             action_values[0, 6] = -float('inf')
         else:
             action_values[0, 5] = -float('inf')
+        '''
 
         explore = random.random() < epsilon
 
