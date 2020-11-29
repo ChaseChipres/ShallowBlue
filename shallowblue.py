@@ -26,7 +26,8 @@ SIZE = 20
 
 SIZE_POOL = SIZE - 1  # water stretches size-1 in each direction
 
-WATER_DEPTH = 5
+WATER_DEPTH = 5  # don't set to above 20 or else it might break and the server might need to be restarted
+
 AGENT_START_Y = WATER_DEPTH + 1  # agent always starts 1 above the water (to prevent excessive falling or other stuff)
 
 DIAMOND_DENSITY = .1
