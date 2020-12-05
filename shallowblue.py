@@ -24,8 +24,8 @@ from torch.utils.data import Dataset, DataLoader
 # Hyperparameters
 SIZE = 20
 SIZE_LESS = 19
-DIAMOND_DENSITY = .01
-COAL_DENSITY = .03
+DIAMOND_DENSITY = .005
+COAL_DENSITY = .015
 OBS_SIZE = 5
 MAX_EPISODE_STEPS = 100
 MAX_GLOBAL_STEPS = 10000
@@ -50,6 +50,7 @@ ACTION_DICT = {
 }
 FULL_AIR = 300
 YPOS_START = 11
+RESOURCES = ['coal', 'diamond']
 
 
 # Q-Value Network
@@ -78,16 +79,20 @@ class QNetwork(nn.Module):
 
 def GetMissionXML():
 
-    grid = choice([0, 1, 2], size=(SIZE_LESS*2, SIZE_LESS*2), p=[.96, DIAMOND_DENSITY, COAL_DENSITY])
-    diamond_xml = ""
-    coal_xml = ""
+    grid = choice([0, 1, 2, 3, 4], size=(SIZE_LESS*2, SIZE_LESS*2), p=[.96, DIAMOND_DENSITY, COAL_DENSITY, 
+        DIAMOND_DENSITY, COAL_DENSITY])
+    resource_xml = ""
 
     for index, row in enumerate(grid):
         for col, item in enumerate(row):
             if item == 1:
-                diamond_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-SIZE_LESS, col-SIZE_LESS)
+                resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-SIZE_LESS, col-SIZE_LESS)
             elif item == 2:
-                diamond_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-SIZE_LESS, col-SIZE_LESS)
+                resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-SIZE_LESS, col-SIZE_LESS)
+            elif item == 3:
+                resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='diamond' />".format(index-SIZE_LESS, col-SIZE_LESS)
+            elif item == 4:
+                resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='coal' />".format(index-SIZE_LESS, col-SIZE_LESS)
     
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -115,8 +120,7 @@ def GetMissionXML():
                             "<DrawCuboid x1='{}' x2='{}' y1='1' y2='20' z1='{}' z2='{}' type='air'/>".format(-SIZE_LESS, SIZE_LESS, -SIZE_LESS, SIZE_LESS) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='sea_lantern'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='10' z1='{}' z2='{}' type='water'/>".format(-SIZE_LESS, SIZE_LESS, -SIZE_LESS, SIZE_LESS) + \
-                            diamond_xml + \
-                            coal_xml + \
+                            resource_xml + \
                             '''
                             
                         </DrawingDecorator>
@@ -163,6 +167,10 @@ def GetMissionXML():
                         <ObservationFromFullStats/>
                         <ObservationFromRay/>
                         <ObservationFromHotBar/>
+
+                        <ObservationFromNearbyEntities>
+                            <Range name="entities" xrange="'''+str(SIZE_LESS)+'''" yrange="1" zrange="'''+str(SIZE_LESS)+'''" />
+                        </ObservationFromNearbyEntities>
 
                         <ObservationFromGrid>
                             <Grid name="floorAll">
@@ -255,6 +263,26 @@ def init_malmo(agent_host):
     return agent_host
 
 
+# inspired by fellow team MineFarm-Farmer: https://yongfeitan.github.io/MineFarm-Farmer/status.html
+def get_entities(entities, agentX, agentZ):
+    resources = dict()
+    for ele in entities:
+        if ele['name'] in RESOURCES:
+            X = ele['x']
+            Y = ele['y']
+            Z = ele['z']
+
+            # if agent is center of 5x5 square, any entity can only be at most 2.5 units away
+            if _dist(agentX, agentZ, X, Z) <= 2.5:
+                id = ele['id']
+                name = ele['name']
+                resources[id] = {'name':name,'x':X,'y':Y,'z':Z}
+    return resources
+
+def _dist(x1,z1,x2,z2):
+    return ((x1-x2)**2 + (z1-z2)**2) ** 0.5
+
+
 def get_observation(world_state):
     """
     Use the agent observation API to get a 2 x 5 x 5 grid around the agent. 
@@ -286,9 +314,35 @@ def get_observation(world_state):
             grid = observations['floorAll']
             air_level = observations['Air']
             has_resources = observations['Hotbar_1_size'] > 0 or observations['Hotbar_2_size'] > 0
+            agentX = observations['XPos']
+            agentZ = observations['ZPos']
+            resources = get_entities(observations['entities'], agentX, agentZ)
+
+            # calculates the row and col in the 5x5 obs array from the entity's (x,z)
+            for entity in resources.values():
+                x = entity['x']
+                z = entity['z']
+
+                col_dist = abs(agentX - x)
+                if x < agentX:
+                    col = 2 - col_dist  # 2 is center column of the grid
+                else:
+                    col = 2 + col_dist
+
+                row_dist = abs(agentZ - z)
+                if z > agentZ:
+                    row = 2 - row_dist  # 2 is center row of the grid
+                else:
+                    row = 2 + row_dist
+
+                # unsure if these observations should go in obs[0] or obs[1]
+                obs[0, int(row), int(col)] = 1
 
             grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
-            obs = np.reshape(grid_binary, (2, OBS_SIZE, OBS_SIZE))
+            grid_obs = np.reshape(grid_binary, (2, OBS_SIZE, OBS_SIZE))
+
+            # obs = 1 where theres a loose resource OR an ore block (multiply by 1 to convert from boolean to int)
+            obs = np.logical_or(obs, grid_obs) * 1
 
             # Rotate observation with orientation of agent
             yaw = observations['Yaw']
