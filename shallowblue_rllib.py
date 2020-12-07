@@ -32,21 +32,12 @@ class ShallowBlue(gym.Env):
         self.obs_size = 5
         self.full_air = 300
         self.ypos_start = 11
-        self.max_episode_steps = 100
+        self.max_episode_steps = 200
         self.log_frequency = 10
-        self.action_dict = {
-            0: 'move 1',        # Move one block forward
-            1: 'setYaw 0',      # Set yaw to 0
-            2: 'setYaw 90',     # Set yaw to 90
-            3: 'setYaw 180',    # Set yaw to 180
-            4: 'setYaw 270',    # Set yaw to 270
-            5: 'jump 0',        # Deactivate continuous jump up
-            6: 'jump 1',        # Activate continuous jump up
-            7: 'attack 1'       # Destroy block
-        }
-
-        # Rllib Parameters
-        self.action_space = Discrete(len(self.action_dict))
+        # 4 kinds of actions: [move, turn, jump, attack]
+  
+        # Rllib Parameters  
+        self.action_space = Box(-1, 1, shape=(4,), dtype=np.float32)
         self.observation_space = Box(0, 1, shape=(np.prod([2, self.obs_size, self.obs_size]), ), dtype=np.int32)
 
         # Malmo Parameters
@@ -61,6 +52,7 @@ class ShallowBlue(gym.Env):
         # ShallowBlue Parameters
         self.obs = None
         self.air_level = 300
+        self.allow_break_action = False
         self.episode_step = 0
         self.episode_return = 0
         self.returns = []
@@ -89,7 +81,7 @@ class ShallowBlue(gym.Env):
             self.log_returns()
 
         # Get Observation
-        self.obs = self.get_observation(world_state)
+        self.obs, self.allow_break_action = self.get_observation(world_state)
 
         return self.obs.flatten()
 
@@ -98,7 +90,7 @@ class ShallowBlue(gym.Env):
         Take an action in the environment and return the results.
 
         Args
-            action: <int> index of the action to take
+            action: 4 tuple corresponding to continous value of each action
 
         Returns
             observation: <np.array> flattened array of obseravtion
@@ -106,41 +98,37 @@ class ShallowBlue(gym.Env):
             done: <bool> indicates terminal state
             info: <dict> dictionary of extra information
         """
+        # allow_break_action = self.obs[1, int(self.obs_size/2)-1, int(self.obs_size/2)] == 1
 
         # Get Action
-        command = self.action_dict[action]
-        allow_break_action = self.obs[1, int(self.obs_size/2)-1, int(self.obs_size/2)] == 1
-
-        if command == 'attack 1' and allow_break_action:
-            self.agent_host.sendCommand(command)
-            time.sleep(.1)
-            self.episode_step += 1
-        elif command == 'attack 1':
-            pass
-        elif command == 'jump 1' and self.air_level > (self.full_air * .3): 
-            pass
-        elif command == 'jump 0' and self.air_level < (self.full_air * .3):
-            pass
+        if self.allow_break_action and action[3] > 0:
+            self.agent_host.sendCommand('move 0')
+            self.agent_host.sendCommand('turn 0')
+            self.agent_host.sendCommand('jump 0')
+            self.agent_host.sendCommand('attack 1')
+            time.sleep(1.5)
+        elif (self.air_level < 0.3 * self.full_air) and action[2] > 0:
+            self.agent_host.sendCommand('move 0')
+            self.agent_host.sendCommand('turn 0')
+            self.agent_host.sendCommand('attack 0')
+            self.agent_host.sendCommand('jump 1')
+            time.sleep(0.2)
         else:
-            self.agent_host.sendCommand(command)
-            time.sleep(.1)
-            self.episode_step += 1
-            
-
-        # Get Done
-        done = False
-        if self.episode_step >= self.max_episode_steps or \
-                (self.obs[0, int(self.obs_size/2)-1, int(self.obs_size/2)] == 1 and \
-                self.obs[1, int(self.obs_size/2)-1, int(self.obs_size/2)] == 0 and \
-                command == 'move 1'):
-            done = True
-            time.sleep(2)  
+            self.agent_host.sendCommand('jump 0')
+            self.agent_host.sendCommand('attack 0')
+            self.agent_host.sendCommand(f'move {action[0]:30.1}')
+            self.agent_host.sendCommand(f'turn {action[1]:30.1}')
+            time.sleep(0.2)
+        self.episode_step += 1
 
         # Get Observation
         world_state = self.agent_host.getWorldState()
         for error in world_state.errors:
             print("Error:", error.text)
-        self.obs = self.get_observation(world_state) 
+        self.obs, self.allow_break_action = self.get_observation(world_state) 
+
+        # Get Done
+        done = not world_state.is_mission_running
 
         # Get Reward
         reward = 0
@@ -209,6 +197,8 @@ class ShallowBlue(gym.Env):
                         </AgentStart>
 
                         <AgentHandlers>
+                        
+                            <ContinuousMovementCommands/>
 
                             <RewardForCollectingItem>
                                 <Item reward="2" type="diamond"/>
@@ -216,23 +206,9 @@ class ShallowBlue(gym.Env):
                             </RewardForCollectingItem>
 
                             <RewardForMissionEnd rewardForDeath="-1"> 
-                                <Reward reward="0" description=""></Reward>
+                                <Reward reward="0" description="Mission End"></Reward>
                             </RewardForMissionEnd>
-        
-                            <DiscreteMovementCommands>
-                                <ModifierList type="deny-list">
-                                    <command>jump</command>
-                                </ModifierList>
-                            </DiscreteMovementCommands>
-
-                            <ContinuousMovementCommands>
-                                <ModifierList type="allow-list">
-                                    <command>jump</command>
-                                </ModifierList>
-                            </ContinuousMovementCommands>
-
-                            <AbsoluteMovementCommands/>
-
+                    
                             <ObservationFromFullStats/>
                             <ObservationFromRay/>
                             <ObservationFromHotBar/>
@@ -295,6 +271,7 @@ class ShallowBlue(gym.Env):
             observation: <np.array>
         """
         obs = np.zeros((2, self.obs_size, self.obs_size))
+        allow_break_action = False
 
         while world_state.is_mission_running:
             time.sleep(0.1)
@@ -321,10 +298,13 @@ class ShallowBlue(gym.Env):
                     obs = np.rot90(obs, k=2, axes=(1, 2))
                 elif yaw == 90:
                     obs = np.rot90(obs, k=3, axes=(1, 2))
+
+                allow_break_action = observations['LineOfSight']['type'] == 'diamond_ore' or \
+                    observations['LineOfSight']['type'] == 'coal_ore'
                 
                 break
 
-        return obs
+        return obs, allow_break_action
 
     def log_returns(self):
         """
@@ -338,7 +318,7 @@ class ShallowBlue(gym.Env):
         returns_smooth = np.convolve(self.returns, box, mode='same')
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('Diamond Collector')
+        plt.title('Shallow Blue')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         plt.savefig('returns.png')
