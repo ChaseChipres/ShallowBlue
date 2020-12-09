@@ -23,15 +23,17 @@ from ray.rllib.agents import ppo
 
 class ShallowBlue(gym.Env):
 
+
     def __init__(self, env_config):  
         # Static Parameters
         self.size = 20
         self.size_pool = 19
-        self.diamond_density = .01
-        self.coal_density = .03
+        self.diamond_density = .005
+        self.coal_density = .015
         self.obs_size = 5
         self.full_air = 300
         self.ypos_start = 11
+        self.resource_list = {'coal', 'diamond'}
         self.max_episode_steps = 200
         self.log_frequency = 10
         # 4 kinds of actions: [move, turn, jump, attack]
@@ -57,6 +59,10 @@ class ShallowBlue(gym.Env):
         self.episode_return = 0
         self.returns = []
         self.steps = []
+
+        # reminder to implement penalty for 0 resources picked up if needed
+        self.has_resources = False 
+
 
     def reset(self):
         """
@@ -84,6 +90,7 @@ class ShallowBlue(gym.Env):
         self.obs, self.allow_break_action = self.get_observation(world_state)
 
         return self.obs.flatten()
+
 
     def step(self, action):
         """
@@ -138,18 +145,24 @@ class ShallowBlue(gym.Env):
 
         return self.obs.flatten(), reward, done, dict()
 
+
     def get_mission_xml(self):
-        grid = choice([0, 1, 2], size=(self.size_pool*2, self.size_pool*2), p=[.96, self.diamond_density, self.coal_density])
-        diamond_xml = ""
-        coal_xml = ""
+        grid = choice([0, 1, 2, 3, 4], size=(self.size_pool*2, self.size_pool*2), p=[.96, self.diamond_density, self.coal_density, 
+            self.diamond_density, self.coal_density])
+        resource_xml = ""
 
         for index, row in enumerate(grid):
             for col, item in enumerate(row):
                 if item == 1:
-                    diamond_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-self.size_pool, col-self.size_pool)
-                elif item == 2:
-                    diamond_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-self.size_pool, col-self.size_pool)
-        
+                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-self.size_pool, col-self.size_pool)
+                if item == 2:
+                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-self.size_pool, col-self.size_pool)
+                if item == 3:
+                    resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='diamond' />".format(index-self.size_pool, col-self.size_pool)
+                elif item == 4:
+                    resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='coal' />".format(index-self.size_pool, col-self.size_pool)
+
+
         return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
                 <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
@@ -176,8 +189,7 @@ class ShallowBlue(gym.Env):
                                 "<DrawCuboid x1='{}' x2='{}' y1='1' y2='20' z1='{}' z2='{}' type='air'/>".format(-self.size_pool, self.size_pool, -self.size_pool, self.size_pool) + \
                                 "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='sea_lantern'/>".format(-self.size, self.size, -self.size, self.size) + \
                                 "<DrawCuboid x1='{}' x2='{}' y1='2' y2='10' z1='{}' z2='{}' type='water'/>".format(-self.size_pool, self.size_pool, -self.size_pool, self.size_pool) + \
-                                diamond_xml + \
-                                coal_xml + \
+                                resource_xml + \
                                 '''
                                 
                             </DrawingDecorator>
@@ -213,6 +225,10 @@ class ShallowBlue(gym.Env):
                             <ObservationFromRay/>
                             <ObservationFromHotBar/>
 
+                            <ObservationFromNearbyEntities>
+                                <Range name="entities" xrange="'''+str(self.size_pool)+'''" yrange="1" zrange="'''+str(self.size_pool)+'''" />
+                            </ObservationFromNearbyEntities>
+
                             <ObservationFromGrid>
                                 <Grid name="floorAll">
                                     <min x="-'''+str(int(self.obs_size/2))+'''" y="-1" z="-'''+str(int(self.obs_size/2))+'''"/>
@@ -225,6 +241,7 @@ class ShallowBlue(gym.Env):
                         </AgentHandlers>
                     </AgentSection>
                 </Mission>'''
+
 
     def init_malmo(self):
         """
@@ -259,6 +276,27 @@ class ShallowBlue(gym.Env):
 
         return world_state
 
+
+    # inspired by fellow team MineFarm-Farmer: https://yongfeitan.github.io/MineFarm-Farmer/status.html
+    def get_entities(self, entities, agentX, agentZ):
+        resources = dict()
+        for ele in entities:
+            if ele['name'] in self.resource_list:
+                X = ele['x']
+                Y = ele['y']
+                Z = ele['z']
+
+                # if agent is center of 5x5 square, any entity can only be at most 2.5 units away
+                if self._dist(agentX, agentZ, X, Z) <= 2.5:
+                    id = ele['id']
+                    name = ele['name']
+                    resources[id] = {'name':name,'x':X,'y':Y,'z':Z}
+        return resources
+
+    def _dist(self, x1,z1,x2,z2):
+        return ((x1-x2)**2 + (z1-z2)**2) ** 0.5
+    
+
     def get_observation(self, world_state):
         """
         Use the agent observation API to get a 2 x 5 x 5 grid around the agent. 
@@ -287,8 +325,35 @@ class ShallowBlue(gym.Env):
                 # Get observation
                 grid = observations['floorAll']
                 self.air_level = observations['Air']
+                agentX = observations['XPos']
+                agentZ = observations['ZPos']
+                resources = self.get_entities(observations['entities'], agentX, agentZ)
+
+                # calculates the row and col in the 5x5 obs array from the entity's (x,z)
+                for entity in resources.values():
+                    x = entity['x']
+                    z = entity['z']
+
+                    col_dist = abs(agentX - x)
+                    if x < agentX:
+                        col = 2 - col_dist  # 2 is center column of the grid
+                    else:
+                        col = 2 + col_dist
+
+                    row_dist = abs(agentZ - z)
+                    if z > agentZ:
+                        row = 2 - row_dist  # 2 is center row of the grid
+                    else:
+                        row = 2 + row_dist
+
+                    # unsure if these observations should go in obs[0] or obs[1]
+                    obs[0, int(row), int(col)] = 1
+
                 grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
-                obs = np.reshape(grid_binary, (2, self.obs_size, self.obs_size))
+                grid_obs = np.reshape(grid_binary, (2, self.obs_size, self.obs_size))
+
+                # obs = 1 where theres a loose resource OR an ore block
+                obs = np.logical_or(obs, grid_obs) * 1
 
                 # Rotate observation with orientation of agent
                 yaw = observations['Yaw']
@@ -305,6 +370,7 @@ class ShallowBlue(gym.Env):
                 break
 
         return obs, allow_break_action
+
 
     def log_returns(self):
         """
