@@ -33,7 +33,8 @@ class ShallowBlue(gym.Env):
         self.size_pool = 19
         self.diamond_density = .005
         self.coal_density = .015
-        self.obstacle_density = .05
+        self.redstone_density = .05
+        self.tnt_density = .01
         self.obs_size = 5
         self.ypos_start = 11
         self.resource_list = {'coal', 'diamond'}
@@ -232,6 +233,10 @@ class ShallowBlue(gym.Env):
                             <RewardForMissionEnd rewardForDeath="-1"> 
                                 <Reward reward="0" description="Mission End"></Reward>
                             </RewardForMissionEnd>
+
+                            <RewardForTouchingBlockType>
+                                <Block type="tnt" reward="-0.5"></Block>
+                             </RewardForTouchingBlockType>
                     
                             <ObservationFromFullStats/>
                             <ObservationFromRay/>
@@ -256,8 +261,10 @@ class ShallowBlue(gym.Env):
 
 
     def add_xml_resources(self):
-        grid = choice([0, 1, 2, 3, 4], size=(self.size_pool*2, self.size_pool*2), p=[.96, self.diamond_density, self.coal_density, 
-            self.diamond_density, self.coal_density])
+        resource_prob = 2*self.diamond_density + 2*self.coal_density + self.tnt_density
+
+        grid = choice([0, 1, 2, 3, 4, 5], size=(self.size_pool*2, self.size_pool*2), p=[1-resource_prob, self.diamond_density, self.coal_density, 
+            self.diamond_density, self.coal_density, self.tnt_density])
         resource_xml = ""
 
         for index, row in enumerate(grid):
@@ -270,17 +277,21 @@ class ShallowBlue(gym.Env):
                     resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='diamond' />".format(index-self.size_pool, col-self.size_pool)
                 elif item == 4:
                     resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='coal' />".format(index-self.size_pool, col-self.size_pool)
+                elif item == 5:
+                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='tnt' />".format(index-self.size_pool, col-self.size_pool)
+        
         return resource_xml
 
 
     def add_xml_obstacles(self):
-        grid = choice([0, 1], size=(self.size_pool*2, self.size_pool*2), p=[1-self.obstacle_density, self.obstacle_density])
+        grid = choice([0, 1], size=(self.size_pool*2, self.size_pool*2), p=[1-self.redstone_density, self.redstone_density])
         obstacle_xml = ""
 
         for index, row in enumerate(grid):
             for col, item in enumerate(row):
                 if item == 1:
                     obstacle_xml += "<DrawBlock x='{}'  y='{}' z='{}' type='redstone_block' />".format(index-self.size_pool, self.ypos_start, col-self.size_pool)
+        
         return obstacle_xml
 
 
