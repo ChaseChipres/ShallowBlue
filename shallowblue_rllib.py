@@ -33,6 +33,7 @@ class ShallowBlue(gym.Env):
         self.size_pool = 19
         self.diamond_density = .005
         self.coal_density = .015
+        self.obstacle_density = .05
         self.obs_size = 5
         self.ypos_start = 11
         self.resource_list = {'coal', 'diamond'}
@@ -173,22 +174,6 @@ class ShallowBlue(gym.Env):
 
 
     def get_mission_xml(self):
-        grid = choice([0, 1, 2, 3, 4], size=(self.size_pool*2, self.size_pool*2), p=[.96, self.diamond_density, self.coal_density, 
-            self.diamond_density, self.coal_density])
-        resource_xml = ""
-
-        for index, row in enumerate(grid):
-            for col, item in enumerate(row):
-                if item == 1:
-                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-self.size_pool, col-self.size_pool)
-                if item == 2:
-                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-self.size_pool, col-self.size_pool)
-                if item == 3:
-                    resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='diamond' />".format(index-self.size_pool, col-self.size_pool)
-                elif item == 4:
-                    resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='coal' />".format(index-self.size_pool, col-self.size_pool)
-
-
         return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
                 <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
@@ -215,7 +200,8 @@ class ShallowBlue(gym.Env):
                                 "<DrawCuboid x1='{}' x2='{}' y1='1' y2='20' z1='{}' z2='{}' type='air'/>".format(-self.size_pool, self.size_pool, -self.size_pool, self.size_pool) + \
                                 "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='sea_lantern'/>".format(-self.size, self.size, -self.size, self.size) + \
                                 "<DrawCuboid x1='{}' x2='{}' y1='2' y2='10' z1='{}' z2='{}' type='water'/>".format(-self.size_pool, self.size_pool, -self.size_pool, self.size_pool) + \
-                                resource_xml + \
+                                self.add_xml_resources() + \
+                                self.add_xml_obstacles() + \
                                 '''
                                 
                             </DrawingDecorator>
@@ -267,6 +253,35 @@ class ShallowBlue(gym.Env):
                         </AgentHandlers>
                     </AgentSection>
                 </Mission>'''
+
+
+    def add_xml_resources(self):
+        grid = choice([0, 1, 2, 3, 4], size=(self.size_pool*2, self.size_pool*2), p=[.96, self.diamond_density, self.coal_density, 
+            self.diamond_density, self.coal_density])
+        resource_xml = ""
+
+        for index, row in enumerate(grid):
+            for col, item in enumerate(row):
+                if item == 1:
+                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='diamond_ore' />".format(index-self.size_pool, col-self.size_pool)
+                if item == 2:
+                    resource_xml += "<DrawBlock x='{}'  y='2' z='{}' type='coal_ore' />".format(index-self.size_pool, col-self.size_pool)
+                if item == 3:
+                    resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='diamond' />".format(index-self.size_pool, col-self.size_pool)
+                elif item == 4:
+                    resource_xml += "<DrawItem x='{}'  y='2' z='{}' type='coal' />".format(index-self.size_pool, col-self.size_pool)
+        return resource_xml
+
+
+    def add_xml_obstacles(self):
+        grid = choice([0, 1], size=(self.size_pool*2, self.size_pool*2), p=[1-self.obstacle_density, self.obstacle_density])
+        obstacle_xml = ""
+
+        for index, row in enumerate(grid):
+            for col, item in enumerate(row):
+                if item == 1:
+                    obstacle_xml += "<DrawBlock x='{}'  y='{}' z='{}' type='redstone_block' />".format(index-self.size_pool, self.ypos_start, col-self.size_pool)
+        return obstacle_xml
 
 
     def init_malmo(self):
