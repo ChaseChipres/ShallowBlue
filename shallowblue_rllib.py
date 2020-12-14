@@ -21,6 +21,9 @@ from gym.spaces import Discrete, Box
 from ray.rllib.agents import ppo
 
 
+FULL_AIR = 300
+
+
 class ShallowBlue(gym.Env):
 
 
@@ -31,10 +34,9 @@ class ShallowBlue(gym.Env):
         self.diamond_density = .005
         self.coal_density = .015
         self.obs_size = 5
-        self.full_air = 300
         self.ypos_start = 11
         self.resource_list = {'coal', 'diamond'}
-        self.max_episode_steps = 200
+        self.max_episode_steps = 300
         self.log_frequency = 10
         # 4 kinds of actions: [move, turn, jump, attack]
   
@@ -52,8 +54,15 @@ class ShallowBlue(gym.Env):
             exit(1)
 
         # ShallowBlue Parameters
-        self.obs = None
+        self.air_threshold = 0.3
         self.air_level = 300
+        self.hasAir = True
+        self.breatheReward = 0.1
+        self.damageTaken = -1
+        self.damageReward = 0
+        self.damageWeight = 0.001
+
+        self.obs = None
         self.allow_break_action = False
         self.episode_step = 0
         self.episode_return = 0
@@ -80,6 +89,10 @@ class ShallowBlue(gym.Env):
         self.steps.append(current_step + self.episode_step)
         self.episode_return = 0
         self.episode_step = 0
+        self.damageTaken = -1
+        self.damageReward = 0
+        self.air_level = 300
+        self.hasAir = True
 
         # Log
         if len(self.returns) > self.log_frequency and \
@@ -113,15 +126,15 @@ class ShallowBlue(gym.Env):
             self.agent_host.sendCommand('turn 0')
             self.agent_host.sendCommand('jump 0')
             self.agent_host.sendCommand('attack 1')
-            time.sleep(1.5)
-        elif (self.air_level < 0.3 * self.full_air) and action[2] > 0:
+            time.sleep(2)
+        elif (self.air_level < self.air_threshold * FULL_AIR) and action[2] > 0:
             self.agent_host.sendCommand('move 0')
             self.agent_host.sendCommand('turn 0')
             self.agent_host.sendCommand('attack 0')
             self.agent_host.sendCommand('jump 1')
-            time.sleep(0.2)
+            time.sleep(1)
         else:
-            self.agent_host.sendCommand('jump 0')
+            if action[2] < 0: self.agent_host.sendCommand('jump 0')
             self.agent_host.sendCommand('attack 0')
             self.agent_host.sendCommand(f'move {action[0]:30.1}')
             self.agent_host.sendCommand(f'turn {action[1]:30.1}')
@@ -141,9 +154,22 @@ class ShallowBlue(gym.Env):
         reward = 0
         for r in world_state.rewards:
             reward += r.getValue()
+        reward += self.add_programmatic_rewards()
         self.episode_return += reward
 
         return self.obs.flatten(), reward, done, dict()
+
+
+    def add_programmatic_rewards(self):
+        """ Computes & returns all the rewards not configured in the XML. """
+        reward = self.damageReward * self.damageWeight
+       
+        # if hasAir was False but now agent has air, it must've come up for air successfully
+        if not self.hasAir and self.air_level > 0:
+            reward += self.breatheReward
+            self.hasAir = True
+
+        return reward
 
 
     def get_mission_xml(self):
@@ -322,9 +348,18 @@ class ShallowBlue(gym.Env):
                 msg = world_state.observations[-1].text
                 observations = json.loads(msg)
 
-                # Get observation
-                grid = observations['floorAll']
+                # Get individual observations of damageTaken, air level, grid of ore, and entities (loose resources)
+                damage = observations['DamageTaken']
+                if self.damageTaken != -1 and damage > self.damageTaken:
+                    self.damageReward = self.damageTaken - damage
+                self.damageTaken = damage
+
                 self.air_level = observations['Air']
+                if observations['Air'] <= 0:
+                    self.hasAir = False
+
+                grid = observations['floorAll']
+
                 agentX = observations['XPos']
                 agentZ = observations['ZPos']
                 resources = self.get_entities(observations['entities'], agentX, agentZ)
@@ -346,7 +381,7 @@ class ShallowBlue(gym.Env):
                     else:
                         row = 2 + row_dist
 
-                    # unsure if these observations should go in obs[0] or obs[1]
+                    # I think entity observations should go in obs[0] bc ore is seein in obs[1]
                     obs[0, int(row), int(col)] = 1
 
                 grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
