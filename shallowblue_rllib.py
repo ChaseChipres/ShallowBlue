@@ -34,6 +34,7 @@ class ShallowBlue(gym.Env):
         self.diamond_density = .005
         self.coal_density = .015
         self.obstacle_density = .05
+        self.obs_dim = 3
         self.obs_size = 5
         self.ypos_start = 11
         self.resource_list = {'coal', 'diamond'}
@@ -43,7 +44,7 @@ class ShallowBlue(gym.Env):
   
         # Rllib Parameters  
         self.action_space = Box(-1, 1, shape=(4,), dtype=np.float32)
-        self.observation_space = Box(0, 1, shape=(np.prod([2, self.obs_size, self.obs_size]), ), dtype=np.int32)
+        self.observation_space = Box(-1, 1, shape=(np.prod([self.obs_dim, self.obs_size, self.obs_size]), ), dtype=np.int32)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -232,7 +233,11 @@ class ShallowBlue(gym.Env):
                             <RewardForMissionEnd rewardForDeath="-1"> 
                                 <Reward reward="0" description="Mission End"></Reward>
                             </RewardForMissionEnd>
-                    
+
+                            <RewardForTouchingBlockType>
+                                <Block type="redstone_block" reward="-0.01"></Block>
+                            </RewardForTouchingBlockType>
+
                             <ObservationFromFullStats/>
                             <ObservationFromRay/>
                             <ObservationFromHotBar/>
@@ -244,7 +249,7 @@ class ShallowBlue(gym.Env):
                             <ObservationFromGrid>
                                 <Grid name="floorAll">
                                     <min x="-'''+str(int(self.obs_size/2))+'''" y="-1" z="-'''+str(int(self.obs_size/2))+'''"/>
-                                    <max x="'''+str(int(self.obs_size/2))+'''" y="0" z="'''+str(int(self.obs_size/2))+'''"/>
+                                    <max x="'''+str(int(self.obs_size/2))+'''" y="1" z="'''+str(int(self.obs_size/2))+'''"/>
                                 </Grid>
                             </ObservationFromGrid>
                             
@@ -349,7 +354,7 @@ class ShallowBlue(gym.Env):
         Returns
             observation: <np.array>
         """
-        obs = np.zeros((2, self.obs_size, self.obs_size))
+        obs = np.zeros((self.obs_dim, self.obs_size, self.obs_size))
         allow_break_action = False
 
         while world_state.is_mission_running:
@@ -399,11 +404,18 @@ class ShallowBlue(gym.Env):
                     # I think entity observations should go in obs[0] bc ore is seein in obs[1]
                     obs[0, int(row), int(col)] = 1
 
-                grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
-                grid_obs = np.reshape(grid_binary, (2, self.obs_size, self.obs_size))
+                # ore found in grid[25:49], redstone found in grid[50:74]
+                grid_idx = 25
+                for i in range(self.obs_size):
+                    for j in range(self.obs_size):
+                        obs[1, i, j] = 1 if grid[grid_idx] == 'diamond_ore' or grid[grid_idx] == 'coal_ore' else 0
+                        obs[2, i, j] = -1 if grid[grid_idx + 25] == 'redstone_block' else 0
+                        grid_idx += 1
 
-                # obs = 1 where theres a loose resource OR an ore block
-                obs = np.logical_or(obs, grid_obs) * 1
+                # grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
+                # grid_obs = np.reshape(grid_binary, (3, self.obs_size, self.obs_size))
+           
+                # obs = np.logical_or(obs, grid_obs) * 1
 
                 # Rotate observation with orientation of agent
                 yaw = observations['Yaw']
@@ -414,8 +426,9 @@ class ShallowBlue(gym.Env):
                 elif yaw == 90:
                     obs = np.rot90(obs, k=3, axes=(1, 2))
 
-                allow_break_action = observations['LineOfSight']['type'] == 'diamond_ore' or \
-                    observations['LineOfSight']['type'] == 'coal_ore'
+                allow_break_action = (observations['LineOfSight']['type'] == 'diamond_ore' or \
+                    observations['LineOfSight']['type'] == 'coal_ore') 
+                    # and (obs[1, int(self.obs_size/2)-1, int(self.obs_size/2)] == 1)
                 
                 break
 
