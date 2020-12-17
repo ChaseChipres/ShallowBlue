@@ -41,6 +41,9 @@ class ShallowBlue(gym.Env):
         self.resource_list = {'coal', 'diamond'}
         self.max_episode_steps = 300
         self.log_frequency = 10
+        self.metadata = {'diamond_picked':[0], 'coal_picked': [0], 'redstone_touched':[0], 
+            'tnt_touched':[0], 'num_breaths':[0], 'damage_taken': [0] }
+        self.metadata_txt_pos = 0
         # 4 kinds of actions: [move, turn, jump, attack]
   
         # Rllib Parameters  
@@ -59,11 +62,16 @@ class ShallowBlue(gym.Env):
         # ShallowBlue Parameters
         self.air_threshold = 0.3
         self.air_level = 300
-        self.hasAir = True
-        self.breatheReward = 0.1
-        self.damageTaken = -1
-        self.damageReward = 0
-        self.damageWeight = 0.001
+        self.has_air = True
+        self.damage_taken = -1
+        self.damage_count = 0
+        self.damage_weight = 0.001
+
+        self.diamond_reward = 2
+        self.coal_reward = 0.5
+        self.tnt_reward = -0.1
+        self.redstone_reward = -0.1
+        self.breath_reward = 0.1
 
         self.obs = None
         self.allow_break_action = False
@@ -71,9 +79,6 @@ class ShallowBlue(gym.Env):
         self.episode_return = 0
         self.returns = []
         self.steps = []
-
-        # reminder to implement penalty for 0 resources picked up if needed
-        self.has_resources = False 
 
 
     def reset(self):
@@ -92,15 +97,23 @@ class ShallowBlue(gym.Env):
         self.steps.append(current_step + self.episode_step)
         self.episode_return = 0
         self.episode_step = 0
-        self.damageTaken = -1
-        self.damageReward = 0
+
+        # Reset our Variables
+        self.damage_taken = -1
+        self.damage_count = 0
         self.air_level = 300
-        self.hasAir = True
+        self.has_air = True
+        for tag in self.metadata:
+            self.metadata[tag].append(0)
 
         # Log
         if len(self.returns) > self.log_frequency and \
             len(self.returns) % self.log_frequency == 0:
             self.log_returns()
+
+        if len(self.metadata['diamond_picked']) > self.log_frequency and \
+            len(self.metadata['diamond_picked']) % self.log_frequency == 0:
+            self.log_metadata()
 
         # Get Observation
         self.obs, self.allow_break_action = self.get_observation(world_state)
@@ -156,7 +169,13 @@ class ShallowBlue(gym.Env):
         # Get Reward
         reward = 0
         for r in world_state.rewards:
-            reward += r.getValue()
+            val = r.getValue()
+            if val == self.tnt_reward:
+                self.metadata['tnt_touched'][-1] += 1
+            elif val == self.redstone_reward:
+                self.metadata['redstone_touched'][-1] += 1
+            reward += val
+
         reward += self.add_programmatic_rewards()
         self.episode_return += reward
 
@@ -165,12 +184,14 @@ class ShallowBlue(gym.Env):
 
     def add_programmatic_rewards(self):
         """ Computes & returns all the rewards not configured in the XML. """
-        reward = self.damageReward * self.damageWeight
+        reward = self.damage_count * self.damage_weight
+        self.metadata['damage_taken'][-1] += self.damage_count
        
-        # if hasAir was False but now agent has air, it must've come up for air successfully
-        if not self.hasAir and self.air_level > 0:
-            reward += self.breatheReward
-            self.hasAir = True
+        # if has_air False but now agent has air, it must've come up for air successfully
+        if not self.has_air and self.air_level > 0:
+            reward += self.breath_reward
+            self.metadata['num_breaths'][-1] += 1
+            self.has_air = True
 
         return reward
 
@@ -227,8 +248,10 @@ class ShallowBlue(gym.Env):
                             <ContinuousMovementCommands/>
 
                             <RewardForCollectingItem>
-                                <Item reward="2" type="diamond"/>
-                                <Item reward="0.5" type="coal"/>
+                               ''' + \
+                                f"<Item reward='{self.diamond_reward}' type='diamond'/>" + \
+                                f"<Item reward='{self.coal_reward}' type='coal'/>" + \
+                                '''
                             </RewardForCollectingItem>
 
                             <RewardForMissionEnd rewardForDeath="-1"> 
@@ -236,8 +259,10 @@ class ShallowBlue(gym.Env):
                             </RewardForMissionEnd>
 
                             <RewardForTouchingBlockType>
-                                <Block type="tnt" reward="-0.5"></Block>
-                                <Block type="redstone_block" reward="-0.01"></Block>
+                                 ''' + \
+                                f"<Block type='tnt' reward='{self.tnt_reward}'></Block>" + \
+                                f"<Block type='redstone_block' reward='{self.redstone_reward}'></Block>" + \
+                                '''
                             </RewardForTouchingBlockType>
                             
                             <ObservationFromFullStats/>
@@ -375,16 +400,17 @@ class ShallowBlue(gym.Env):
                 # First we get the json from the observation API
                 msg = world_state.observations[-1].text
                 observations = json.loads(msg)
+                self.fill_metadata(observations)
 
-                # Get individual observations of damageTaken, air level, grid of ore, and entities (loose resources)
+                # Get observations of damageTaken, air level, grid of ore, and entities (loose resources)
                 damage = observations['DamageTaken']
-                if self.damageTaken != -1 and damage > self.damageTaken:
-                    self.damageReward = self.damageTaken - damage
-                self.damageTaken = damage
+                if self.damage_taken != -1 and damage > self.damage_taken:
+                    self.damage_count = self.damage_taken - damage
+                self.damage_taken = damage
 
                 self.air_level = observations['Air']
                 if observations['Air'] <= 0:
-                    self.hasAir = False
+                    self.has_air = False
 
                 grid = observations['floorAll']
 
@@ -409,7 +435,7 @@ class ShallowBlue(gym.Env):
                     else:
                         row = 2 + row_dist
 
-                    # I think entity observations should go in obs[0] bc ore is seein in obs[1]
+                    # entity observations in obs[0] because ore in obs[1]
                     obs[0, int(row), int(col)] = 1
 
                 # ore found in grid[25:49], redstone found in grid[50:74]
@@ -422,7 +448,6 @@ class ShallowBlue(gym.Env):
 
                 # grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
                 # grid_obs = np.reshape(grid_binary, (3, self.obs_size, self.obs_size))
-           
                 # obs = np.logical_or(obs, grid_obs) * 1
 
                 # Rotate observation with orientation of agent
@@ -441,6 +466,17 @@ class ShallowBlue(gym.Env):
                 break
 
         return obs, allow_break_action
+
+
+    def fill_metadata(self, observations):
+        if observations['Hotbar_1_item'] == 'coal':
+            self.metadata['coal_picked'][-1] = observations['Hotbar_1_size']
+        elif observations['Hotbar_1_item'] == 'diamond':
+            self.metadata['diamond_picked'][-1] = observations['Hotbar_1_size']    
+        elif observations['Hotbar_2_item'] == 'coal':
+            self.metadata['coal_picked'][-1] = observations['Hotbar_2_size']  
+        elif observations['Hotbar_2_item'] == 'diamond':
+            self.metadata['diamond_picked'][-1] = observations['Hotbar_2_size']  
 
 
     def log_returns(self):
@@ -463,6 +499,24 @@ class ShallowBlue(gym.Env):
         with open('returns.txt', 'w') as f:
             for step, value in zip(self.steps, self.returns):
                 f.write("{}\t{}\n".format(step, value)) 
+
+
+    def log_metadata(self):
+        """
+        Log the the metadata for each episode since the last time they were
+        logged (depending on log_frequency)
+        """
+        if self.metadata_txt_pos == 0:
+            f = open('metadata.txt', 'w')
+        else:
+            f = open('metadata.txt', 'a')
+
+        i = self.metadata_txt_pos
+        while i < len(self.metadata['diamond_picked']):
+            f.write(f"Diamonds: {self.metadata['diamond_picked'][i]}, Coal: {self.metadata['coal_picked'][i]}, Redstone: {self.metadata['redstone_touched'][i]}, TNT: {self.metadata['tnt_touched'][i]}, Breaths: {self.metadata['num_breaths'][i]}, Damage: {self.metadata['damage_taken'][i]}\n")
+            i += 1
+        self.metadata_txt_pos = i  
+        f.close()
 
 
 if __name__ == '__main__':
