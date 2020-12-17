@@ -23,7 +23,6 @@ from ray.rllib.agents import ppo
 
 FULL_AIR = 300
 
-
 class ShallowBlue(gym.Env):
 
 
@@ -31,6 +30,10 @@ class ShallowBlue(gym.Env):
         # Static Parameters
         self.size = 20
         self.size_pool = 19
+
+        # don't set water depth to above 20 or else it might break and the server might need to be restarted
+        self.water_depth = 10
+
         self.diamond_density = .005
         self.coal_density = .015
         self.redstone_density = .05
@@ -198,10 +201,10 @@ class ShallowBlue(gym.Env):
 
                             <DrawingDecorator>
                                 ''' + \
-                                "<DrawCuboid x1='{}' x2='{}' y1='0' y2='20' z1='{}' z2='{}' type='sea_lantern'/>".format(-self.size, self.size, -self.size, self.size) + \
-                                "<DrawCuboid x1='{}' x2='{}' y1='1' y2='20' z1='{}' z2='{}' type='air'/>".format(-self.size_pool, self.size_pool, -self.size_pool, self.size_pool) + \
-                                "<DrawCuboid x1='{}' x2='{}' y1='0' y2='2' z1='{}' z2='{}' type='sea_lantern'/>".format(-self.size, self.size, -self.size, self.size) + \
-                                "<DrawCuboid x1='{}' x2='{}' y1='2' y2='10' z1='{}' z2='{}' type='water'/>".format(-self.size_pool, self.size_pool, -self.size_pool, self.size_pool) + \
+                                f"<DrawCuboid x1='{-self.size}' x2='{self.size}' y1='0' y2='20' z1='{-self.size}' z2='{self.size}' type='sea_lantern'/>" + \
+                                f"<DrawCuboid x1='{-self.size_pool}' x2='{self.size_pool}' y1='1' y2='20' z1='{-self.size_pool}' z2='{self.size_pool}' type='air'/>" + \
+                                f"<DrawCuboid x1='{-self.size}' x2='{self.size}' y1='0' y2='2' z1='{-self.size}' z2='{self.size}' type='sea_lantern'/>" + \
+                                f"<DrawCuboid x1='{-self.size_pool}' x2='{self.size_pool}' y1='2' y2='{self.water_depth}' z1='{-self.size_pool}' z2='{self.size_pool}' type='water'/>" + \
                                 self.add_xml_resources() + \
                                 self.add_xml_obstacles() + \
                                 '''
