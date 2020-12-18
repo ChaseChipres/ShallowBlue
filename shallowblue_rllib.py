@@ -39,7 +39,7 @@ class ShallowBlue(gym.Env):
         self.obs_size = 5
         self.ypos_start = 11
         self.resource_list = {'coal', 'diamond'}
-        self.max_episode_steps = 300
+        self.max_episode_steps = 500
         self.log_frequency = 10
         self.metadata = {'diamond_picked':[0], 'coal_picked': [0], 'redstone_touched':[0], 
             'tnt_touched':[0], 'num_breaths':[0], 'damage_taken': [0] }
@@ -67,8 +67,8 @@ class ShallowBlue(gym.Env):
         self.damage_count = 0
         self.damage_weight = 0.001
 
-        self.diamond_reward = 2
-        self.coal_reward = 0.5
+        self.diamond_reward = 5
+        self.coal_reward = 2
         self.tnt_reward = -0.1
         self.redstone_reward = -0.1
         self.breath_reward = 0.1
@@ -397,12 +397,11 @@ class ShallowBlue(gym.Env):
                 raise AssertionError('Could not load grid.')
 
             if world_state.number_of_observations_since_last_state > 0:
-                # First we get the json from the observation API
                 msg = world_state.observations[-1].text
                 observations = json.loads(msg)
-                self.fill_metadata(observations)
+                self.fill_resource_metadata(observations)
 
-                # Get observations of damageTaken, air level, grid of ore, and entities (loose resources)
+                # Get observations
                 damage = observations['DamageTaken']
                 if self.damage_taken != -1 and damage > self.damage_taken:
                     self.damage_count = self.damage_taken - damage
@@ -412,44 +411,10 @@ class ShallowBlue(gym.Env):
                 if observations['Air'] <= 0:
                     self.has_air = False
 
-                grid = observations['floorAll']
-
-                agentX = observations['XPos']
-                agentZ = observations['ZPos']
-                resources = self.get_entities(observations['entities'], agentX, agentZ)
-
-                # calculates the row and col in the 5x5 obs array from the entity's (x,z)
-                for entity in resources.values():
-                    x = entity['x']
-                    z = entity['z']
-
-                    col_dist = abs(agentX - x)
-                    if x < agentX:
-                        col = 2 - col_dist  # 2 is center column of the grid
-                    else:
-                        col = 2 + col_dist
-
-                    row_dist = abs(agentZ - z)
-                    if z > agentZ:
-                        row = 2 - row_dist  # 2 is center row of the grid
-                    else:
-                        row = 2 + row_dist
-
-                    # entity observations in obs[0] because ore in obs[1]
-                    obs[0, int(row), int(col)] = 1
-
-                # ore found in grid[25:49], redstone found in grid[50:74]
-                grid_idx = 25
-                for i in range(self.obs_size):
-                    for j in range(self.obs_size):
-                        obs[1, i, j] = 1 if grid[grid_idx] == 'diamond_ore' or grid[grid_idx] == 'coal_ore' else 0
-                        obs[2, i, j] = -1 if grid[grid_idx + 25] == 'redstone_block' else 0
-                        grid_idx += 1
-
-                # grid_binary = [1 if x == 'diamond_ore' or x == 'coal_ore' else 0 for x in grid]
-                # grid_obs = np.reshape(grid_binary, (3, self.obs_size, self.obs_size))
-                # obs = np.logical_or(obs, grid_obs) * 1
-
+                # Create the 3x5x5 grid that gets passed to the network
+                obs = self.fill_entity_grid(obs, observations)
+                obs = self.fill_ore_grid(obs, observations)
+                
                 # Rotate observation with orientation of agent
                 yaw = observations['Yaw']
                 if yaw == 270:
@@ -468,15 +433,82 @@ class ShallowBlue(gym.Env):
         return obs, allow_break_action
 
 
-    def fill_metadata(self, observations):
+    def fill_entity_grid(self, obs, observations):
+        """
+        Fills the 1st channel of obs with the presence entities in a 5x5 grid around the agent.
+        """
+        agentX = observations['XPos']
+        agentZ = observations['ZPos']
+        entities = self.get_entities(observations['entities'], agentX, agentZ)
+
+        for entity in entities.values():
+            x = entity['x']
+            z = entity['z']
+
+            col_dist = abs(agentX - x)
+            if x < agentX:
+                col = 2 - col_dist  # 2 is center column of the grid
+            else:
+                col = 2 + col_dist
+
+            row_dist = abs(agentZ - z)
+            if z > agentZ:
+                row = 2 - row_dist  # 2 is center row of the grid
+            else:
+                row = 2 + row_dist
+
+            if entity['name'] == 'diamond':
+                obs[0, int(row), int(col)] = 0.25 
+            elif entity['name'] == 'coal':
+                obs[0, int(row), int(col)] = 0.5
+            else:
+                obs[0, int(row), int(col)] = 0
+        
+        return obs
+
+
+    def fill_ore_grid(self, obs, observations):
+        """
+        Fills the 2nd & 3rd channels of obs with the presence of coal, diamond, tnt, and redstone blocks.
+        """
+        grid = observations['floorAll']
+        grid_idx = 25
+
+        for i in range(self.obs_size):
+            for j in range(self.obs_size):
+                if grid[grid_idx] == 'diamond_ore':
+                    obs[1, i, j] = 0.75
+                elif grid[grid_idx] == 'coal_ore':
+                    obs[1, i, j] = 1
+                elif grid[grid_idx] == 'tnt':
+                    obs[1, i, j] = -0.75
+                else:
+                    obs[1, i, j] = 0
+
+                obs[2, i, j] = -1 if grid[grid_idx + 25] == 'redstone_block' else 0
+                grid_idx += 1
+
+        return obs
+
+
+    def fill_resource_metadata(self, observations):
+        """ 
+        Checks the agent's hotbar to update the number of diamonds & coal picked up
+        """
         if observations['Hotbar_1_item'] == 'coal':
             self.metadata['coal_picked'][-1] = observations['Hotbar_1_size']
         elif observations['Hotbar_1_item'] == 'diamond':
-            self.metadata['diamond_picked'][-1] = observations['Hotbar_1_size']    
-        elif observations['Hotbar_2_item'] == 'coal':
+            self.metadata['diamond_picked'][-1] = observations['Hotbar_1_size']   
+
+        if observations['Hotbar_2_item'] == 'coal':
             self.metadata['coal_picked'][-1] = observations['Hotbar_2_size']  
         elif observations['Hotbar_2_item'] == 'diamond':
-            self.metadata['diamond_picked'][-1] = observations['Hotbar_2_size']  
+            self.metadata['diamond_picked'][-1] = observations['Hotbar_2_size'] 
+
+        if observations['Hotbar_3_item'] == 'coal':
+            self.metadata['coal_picked'][-1] = observations['Hotbar_3_size']  
+        elif observations['Hotbar_3_item'] == 'diamond':
+            self.metadata['diamond_picked'][-1] = observations['Hotbar_3_size']   
 
 
     def log_returns(self):
