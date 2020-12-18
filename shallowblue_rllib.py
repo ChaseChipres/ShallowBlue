@@ -504,7 +504,8 @@ class ShallowBlue(gym.Env):
             self.metadata['coal_picked'][-1] = observations['Hotbar_1_size']
         elif observations['Hotbar_1_item'] == 'diamond':
             self.metadata['diamond_picked'][-1] = observations['Hotbar_1_size']
-        elif observations['Hotbar_2_item'] == 'coal':
+
+        if observations['Hotbar_2_item'] == 'coal':
             self.metadata['coal_picked'][-1] = observations['Hotbar_2_size']
         elif observations['Hotbar_2_item'] == 'diamond':
             self.metadata['diamond_picked'][-1] = observations['Hotbar_2_size']
