@@ -5,9 +5,7 @@ title:  Final Report
 
 ## Project Summary 
   
-| | |    
-| :--------------------------: | :--------------------------: | 
-| ![](img/Surface.png) | ![](img/Seabed.png) |  
+![](img/Seabed.png)  
 
 Our goal was to create an agent that gathers underwater resources in the most efficient way possible. The agent is dropped into a random spot in an environment composed of a flat, 40x40 block seabed with a water depth of 10 blocks. Diamond ore, coal ore, loose diamonds, and loose coal are randomly spawned throughout the bottom of this environment; these act as the resources the agent must gather. Blocks of TNT that the agent must learn to avoid are similarly distributed. Finally, the surface of the water is littered with redstone blocks that impair the agent’s ability to refill its air level. Depending on these obstacles, our agent learns to take appropriate actions, such as heading to the surface of the water to replenish air, avoiding obstacles, and collecting resources. 
 
