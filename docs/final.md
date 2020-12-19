@@ -5,7 +5,8 @@ title:  Final Report
 
 ## Project Summary 
 | | |    
-| :--------------------------: | :--------------------------: |  
+| :--------------------------: | :--------------------------: | 
+
 | ![](img/Surface.png) | ![](img/Seabed.png) |  
 
 Our goal was to create an agent that gathers underwater resources in the most efficient way possible. The agent is dropped into a random spot in an environment composed of a flat, 40x40 block seabed with a water depth of 10 blocks. Diamond ore, coal ore, loose diamonds, and loose coal are randomly spawned throughout the bottom of this environment; these act as the resources the agent must gather. Blocks of TNT that the agent must learn to avoid are similarly distributed. Finally, the surface of the water is littered with redstone blocks that impair the agent’s ability to refill its air level. Depending on these obstacles, our agent learns to take appropriate actions, such as heading to the surface of the water to replenish air, avoiding obstacles, and collecting resources. 
@@ -55,6 +56,7 @@ The main baseline we compared this version of our agent to was the one used for 
 
 | Status Report Average Return | Current Agent Average Return |    
 | :--------------------------: | :--------------------------: |  
+
 | ![](img/Status_report_return_graph.png) | ![](img/final_report_returns.png) |  
 
 Additionally, our RLlib agent achieved a higher maximum and average return as shown in the right-hand side graph above. Our video also demonstrates that this current agent is able to achieve more desired behaviors, such as taking more breaths per episode to increase exploration time, avoiding redstone, and more.
@@ -89,6 +91,7 @@ By adding these features to our project, we are able to concretely evaluate whet
 
 | Status Report Agent | Current Agent |    
 | ------------------- | ------------- |  
+
 | Mining diamond ore  | Mining diamond ore |  
 | Mining coal ore     | Mining coal ore |  
 | Swimming to the surface for air (only did this once to survive) | Swimming to the surface for air >1 times (due to longer episodes) |  
