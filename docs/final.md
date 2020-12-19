@@ -4,8 +4,7 @@ title:  Final Report
 ---
 
 ## Project Summary 
-| | |
-
+| | |  
 | :--------------------------: | :--------------------------: |  
 | ![](img/Surface.png) | ![](img/Seabed.png) |  
 
@@ -55,7 +54,6 @@ The main baseline we compared this version of our agent to was the one used for 
 
 
 | Status Report Average Return | Current Agent Average Return |  
-
 | :--------------------------: | :--------------------------: |  
 | ![](img/Status_report_return_graph.png) | ![](img/final_report_returns.png) |  
 
@@ -88,7 +86,6 @@ Our qualitative evaluation also relies on the metadata logging shown above. Thes
 By adding these features to our project, we are able to concretely evaluate whether our agent is able to successfully learn and execute more behaviors than before. A comparison between the two versions of our agent is shown below:
 
 | Status Report Agent | Current Agent |  
-
 | ------------------- | ------------- |  
 | Mining diamond ore  | Mining diamond ore |  
 | Mining coal ore     | Mining coal ore |  
