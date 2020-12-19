@@ -73,13 +73,15 @@ A few key takeaways can be seen from this sample of metadata. First of all, the 
 
 ![Metadata from later in the traning process](img/Early_Metadata.png)
 
-*Late training metadata sample (approximately 20000 steps in)*
+*Late training metadata sample (approximately 20000 steps in)*  
+
+With this sample taken later in the training process, we can see that our agent is more successful in executing intended behaviors. Our agent picks up 1-2 diamonds and 0-1 coal on average. Diamonds do have a much higher reward (+5 vs +2), so it makes sense for the agent to prioritize picking them up when possible. Our agent was also able to avoid all surface redstone obstacles in this sample. When it came to avoiding TNT, our agent appears to have struggled on a few episodes, but was mostly able to avoid the obstacle. Our hypothesis is that as the agent learns to spend more time underwater, it is more likely to run into underwater obstacles rather than the redstone on the surface. Lastly, our agent now consistently comes to the surface for air. As mentioned, we predicted our agent would achieve 2-3 breaths every episode. Finally, the damage our agent sustains did not seem to meaningfully decrease. However, we do not think this impacts the success of our agent since it should be able to sacrifice health in order to gather more resources as long as it does not drown.
 
 ![Current Average Return](img/final_report_returns.png)
 
 *Return over 70000 steps*
 
-We can see from this graph that our agent’s return certainly fluctuates, despite a large proportion of the data still trending upwards. Unfortunately, we still have instances where our agent is either not collecting any resources, or our negative rewards happened to outweigh any positive behavior (perhaps only mining one piece of coal). This graph is also from our longest training session of 140 episodes. We did not get an opportunity to see if training even longer than this would help overcome the complexities of executing several behaviors successfully.
+We can see from this returns graph that our agent’s return certainly fluctuates, despite a large proportion of the data still trending upwards. Unfortunately, we still have instances where our agent is either not collecting any resources, or our negative rewards happened to outweigh any positive behavior (perhaps only mining one piece of coal). This graph is also from our longest training session of 140 episodes. We did not get an opportunity to see if training even longer than this would help overcome the complexities of executing several behaviors successfully.
 
 Our qualitative evaluation also relies on the metadata logging shown above. These logs were used to visualize the effectiveness of features we added to our agent since the Status Report submission. Some new features are the inclusion of two different kinds of obstacles, having both loose resources and ore, and incorporating longer episode lengths.
 
