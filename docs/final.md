@@ -89,14 +89,14 @@ By adding these features to our project, we are able to concretely evaluate whet
   
 | Status Report Agent | Current Agent |    
 | ------------------- | ------------- |  
-| &nbsp;&nbsp;&nbsp;Mining diamond ore&nbsp;&nbsp;&nbsp;  | &nbsp;&nbsp;&nbsp;Mining diamond ore&nbsp;&nbsp;&nbsp; |  
-| &nbsp;&nbsp;&nbsp;Mining coal ore&nbsp;&nbsp;&nbsp;     | &nbsp;&nbsp;&nbsp;Mining coal ore&nbsp;&nbsp;&nbsp; |  
-| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Swimming to the surface for air (only did this once to survive)&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;Swimming to the surface for air >1 times (due to longer episodes)&nbsp;&nbsp;&nbsp; |  
-|                     | &nbsp;&nbsp;&nbsp;Collecting loose diamonds&nbsp;&nbsp;&nbsp; |  
-|                     | &nbsp;&nbsp;&nbsp;Collecting loose coal&nbsp;&nbsp;&nbsp; |  
-|                     | &nbsp;&nbsp;&nbsp;Avoiding TNT blocks on the seabed&nbsp;&nbsp;&nbsp; |  
-|                     | &nbsp;&nbsp;&nbsp;Avoiding redstone blocks on the surface&nbsp;&nbsp;&nbsp; |  
-|                     | &nbsp;&nbsp;&nbsp;Limiting the amount of damage taken (our agent takes damage when out of air)&nbsp;&nbsp;&nbsp; |  
+| Mining diamond ore&nbsp;&nbsp;&nbsp;  | Mining diamond ore&nbsp; |  
+| Mining coal ore&nbsp;&nbsp;&nbsp;     | Mining coal ore&nbsp; |  
+| Swimming to the surface for air (only did this once to survive)&nbsp;&nbsp;&nbsp; | Swimming to the surface for air >1 times (due to longer episodes) |  
+|                     | Collecting loose diamonds |  
+|                     | Collecting loose coal |  
+|                     | Avoiding TNT blocks on the seabed |  
+|                     | Avoiding redstone blocks on the surface |  
+|                     | Limiting the amount of damage taken (our agent takes damage when out of air) |  
 
 Our video also contains examples of all the behaviors mentioned above. There our agent can be seen actively applying these behaviors depending on the states it encounters and shows definitive examples of how the current agent improves over the Status Report agent baseline. 
 
