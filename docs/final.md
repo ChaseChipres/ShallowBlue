@@ -4,9 +4,9 @@ title:  Final Report
 ---
 
 ## Project Summary 
+  
 | | |    
 | :--------------------------: | :--------------------------: | 
-
 | ![](img/Surface.png) | ![](img/Seabed.png) |  
 
 Our goal was to create an agent that gathers underwater resources in the most efficient way possible. The agent is dropped into a random spot in an environment composed of a flat, 40x40 block seabed with a water depth of 10 blocks. Diamond ore, coal ore, loose diamonds, and loose coal are randomly spawned throughout the bottom of this environment; these act as the resources the agent must gather. Blocks of TNT that the agent must learn to avoid are similarly distributed. Finally, the surface of the water is littered with redstone blocks that impair the agent’s ability to refill its air level. Depending on these obstacles, our agent learns to take appropriate actions, such as heading to the surface of the water to replenish air, avoiding obstacles, and collecting resources. 
@@ -53,10 +53,9 @@ The agent’s terminal states are the end of an episode or drowning. Drowning do
 
 The main baseline we compared this version of our agent to was the one used for our Status Report. That agent was based on the original Assignment Two code, which used the QNetwork class to implement Deep Q-network Reinforcement Learning. The main limitation of this agent was its inability to learn complex behaviors, even after training for long periods of time. The large number of discrete actions it needed to learn (8 as opposed to the original Assignment Two’s 4) undoubtedly hampered its progress. Furthermore, this discrete action space did not extend to more complex scenarios we imagined for our agent, such as executing turns while swimming to avoid obstacles. For our final version, there are again only 4 values produced by our network that get mapped to actions. 
 
-
+  
 | Status Report Average Return | Current Agent Average Return |    
 | :--------------------------: | :--------------------------: |  
-
 | ![](img/Status_report_return_graph.png) | ![](img/final_report_returns.png) |  
 
 Additionally, our RLlib agent achieved a higher maximum and average return as shown in the right-hand side graph above. Our video also demonstrates that this current agent is able to achieve more desired behaviors, such as taking more breaths per episode to increase exploration time, avoiding redstone, and more.
@@ -89,9 +88,9 @@ Our qualitative evaluation also relies on the metadata logging shown above. Thes
 
 By adding these features to our project, we are able to concretely evaluate whether our agent is able to successfully learn and execute more behaviors than before. A comparison between the two versions of our agent is shown below:
 
+  
 | Status Report Agent | Current Agent |    
 | ------------------- | ------------- |  
-
 | Mining diamond ore  | Mining diamond ore |  
 | Mining coal ore     | Mining coal ore |  
 | Swimming to the surface for air (only did this once to survive) | Swimming to the surface for air >1 times (due to longer episodes) |  
