@@ -4,7 +4,7 @@ title:  Final Report
 ---
 
 ## Project Summary 
-| | |  
+| | |    
 | :--------------------------: | :--------------------------: |  
 | ![](img/Surface.png) | ![](img/Seabed.png) |  
 
@@ -53,11 +53,11 @@ The agent’s terminal states are the end of an episode or drowning. Drowning do
 The main baseline we compared this version of our agent to was the one used for our Status Report. That agent was based on the original Assignment Two code, which used the QNetwork class to implement Deep Q-network Reinforcement Learning. The main limitation of this agent was its inability to learn complex behaviors, even after training for long periods of time. The large number of discrete actions it needed to learn (8 as opposed to the original Assignment Two’s 4) undoubtedly hampered its progress. Furthermore, this discrete action space did not extend to more complex scenarios we imagined for our agent, such as executing turns while swimming to avoid obstacles. For our final version, there are again only 4 values produced by our network that get mapped to actions. 
 
 
-| Status Report Average Return | Current Agent Average Return |  
+| Status Report Average Return | Current Agent Average Return |    
 | :--------------------------: | :--------------------------: |  
 | ![](img/Status_report_return_graph.png) | ![](img/final_report_returns.png) |  
 
-Additionally, with the same numerical values for rewards, our RLlib agent achieved a higher maximum and average return as shown in the right-hand side graph above. Our video also demonstrates that this current agent is able to achieve more desired behaviors, such as taking more breaths per episode to increase exploration time, avoiding redstone, and more.
+Additionally, our RLlib agent achieved a higher maximum and average return as shown in the right-hand side graph above. Our video also demonstrates that this current agent is able to achieve more desired behaviors, such as taking more breaths per episode to increase exploration time, avoiding redstone, and more.
 
 While the current form of our agent has numerous advantages as outlined above, its one disadvantage is the large increase in the number of observations passed to our network. Due to the <ObservationFromGrid> being extended another dimension, there is a 50% increase in the flattened observation size. These extra 25 values likely increase the complexity of our network and the time needed for PPO to converge. However, since the average return increased significantly compared with the older approach, we settled on this version of our agent.  
 <br/>  
@@ -87,7 +87,7 @@ Our qualitative evaluation also relies on the metadata logging shown above. Thes
 
 By adding these features to our project, we are able to concretely evaluate whether our agent is able to successfully learn and execute more behaviors than before. A comparison between the two versions of our agent is shown below:
 
-| Status Report Agent | Current Agent |  
+| Status Report Agent | Current Agent |    
 | ------------------- | ------------- |  
 | Mining diamond ore  | Mining diamond ore |  
 | Mining coal ore     | Mining coal ore |  
