@@ -3,6 +3,7 @@ layout: default
 title:  Final Report
 ---
 
+## Video
 <iframe width="640" height="480" src="https://www.youtube.com/embed/jsDZ6G1oCIc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Project Summary 
